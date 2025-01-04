@@ -1,13 +1,14 @@
 const pdf = require('pdf-parse');
 const fs = require('fs');
 
-Date.prototype.yyyymmdd = function() {
+Date.prototype.mmddyyyy = function() {
     var mm = this.getMonth() + 1; // getMonth() is zero-based
     var dd = this.getDate();
   
-    return [this.getFullYear(),
+    return [
             (mm>9 ? '' : '0') + mm,
-            (dd>9 ? '' : '0') + dd
+            (dd>9 ? '' : '0') + dd,
+            this.getFullYear()
            ].join('/');
   };
 
@@ -32,9 +33,12 @@ let options = {
     pagerender: render_page
 }
 
+const institution = 'Robinhood';
+const accountNumber = 'xxxx5396';
+const accountName = 'Robinhood Gold Creditcard';
 
 const dataBuffer = fs.readFileSync('./test.pdf');
-let csvOutput = 'Date,Description,Amount\n';
+let csvOutput = 'Date,Description,Amount,Institution,Account #,Account\n';
  
 pdf(dataBuffer,options).then(function(data) {
     const match = data.text.match(/Statement Closing Date.*\n/g);
@@ -51,24 +55,27 @@ pdf(dataBuffer,options).then(function(data) {
                     const date = new Date(line.slice(0, 5));
                     date.setFullYear(statementDate.getFullYear());
                     const sections = line.split(' ');
-                    let total = sections[sections.length - 1];
+                    let total = sections[sections.length - 1].replace(',', '');
                     if (total[total.length - 1] === '-') {
                         total = total.slice(0, total.length - 1);
                     } else {
                         total = `-${total}`;
                     }
+                    total = parseFloat(total);
                     const description = sections.slice(3, sections.length - 1).join(' ');
-                    // console.log('total:', total);
+                    // console.log('total:', parseFloat(total));
                     // console.log('date:', date);
                     // console.log('description:', description);
-                    csvOutput += `${date.yyyymmdd()},\"${description}\",${total}\n`;
+                    if (total !== 0) {
+                        csvOutput += `${date.mmddyyyy()},\"${description}\",${total},${institution},${accountNumber},${accountName}\n`;
+                    }
                 }
                 if (line.match("Transactions continued on next page")) {
                     break;
                 }
             }
         }    
-        fs.writeFile('output.csv', csvOutput, 'utf8', function (err) {
+        fs.writeFile(`robinhood-${statementDate.getFullYear()}-${statementDate.getMonth()}.csv`, csvOutput, 'utf8', function (err) {
             if (err) {
             console.log('Some error occured - file either not saved or corrupted file saved.');
             } else{
