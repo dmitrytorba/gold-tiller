@@ -57,7 +57,11 @@ function processFile(file) {
           if (line.match(/^\d*\//)) {
             // console.log(line);
             const date = new Date(line.slice(0, 5));
-            date.setFullYear(statementDate.getFullYear());
+            if (date.getMonth() === 11 && statementDate.getMonth() === 0) {
+              date.setFullYear(statementDate.getFullYear() - 1);
+            } else {
+              date.setFullYear(statementDate.getFullYear());
+            }
             const sections = line.split(" ");
             let total = sections[sections.length - 1].replace(",", "");
             if (total[total.length - 1] === "-") {
